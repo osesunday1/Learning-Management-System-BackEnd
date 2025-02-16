@@ -14,7 +14,7 @@ const app = express()
 // Middlewares
 app.use(cors())
 
-
+app.use('/clerk', express.raw({ type: 'application/json' }));
 
 // Initialize database connection
 const connect = async () => {
@@ -42,7 +42,8 @@ app.get('/', (req, res) => {
   res.send('Welcome to the GHS Apartment API!');
 });
 
-app.post('/clerk', express.json(), clerkWebhooks);
+// Clerk webhook route (now with correct body parser)
+app.post('/clerk', clerkWebhooks);
 
 
 
