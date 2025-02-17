@@ -29,8 +29,9 @@ mongoose.connection.on("connected", () => console.log("MongoDB Connected"));
 
 // Routes
 app.get('/', (req, res) => res.send('Welcome to the API!'));
-app.use("/api/users", userRoutes);
 app.post('/clerk', clerkWebhooks);
+app.use("/api/users", userRoutes);
+
 
 // Start Server
 const port = process.env.PORT || 5000;
