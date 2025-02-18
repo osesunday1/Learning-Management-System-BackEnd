@@ -6,11 +6,11 @@ import { clerkWebhooks } from './controllers/webhooks.js';
 
 const app = express();
 
-// Middleware for regular JSON requests
+// Apply `express.json()` for normal API requests
 app.use(express.json());
 app.use(cors());
 
-// Clerk Webhook must use `express.raw()`
+// Apply `express.raw()` only for Clerk Webhook route
 app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
 
 // Connect to MongoDB

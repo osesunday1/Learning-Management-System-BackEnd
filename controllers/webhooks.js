@@ -5,15 +5,16 @@ export const clerkWebhooks = async (req, res) => {
   try {
     console.log("📢 Webhook received from Clerk");
 
-    // Webhook verification using raw body
-    const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-    const payload = req.body; // No need for JSON parsing
+    // Convert raw body to string (this is required for Svix verification)
+    const payload = req.body.toString();  
     const headers = {
       "svix-id": req.headers["svix-id"],
       "svix-timestamp": req.headers["svix-timestamp"],
       "svix-signature": req.headers["svix-signature"],
     };
 
+    // Verify webhook signature
+    const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
     try {
       whook.verify(payload, headers);
     } catch (err) {
@@ -23,7 +24,7 @@ export const clerkWebhooks = async (req, res) => {
 
     console.log("✅ Webhook Verified Successfully");
 
-    const { data, type } = JSON.parse(payload.toString());
+    const { data, type } = JSON.parse(payload);
 
     if (type === "user.created") {
       console.log("🔹 Processing user.created event:", data);
