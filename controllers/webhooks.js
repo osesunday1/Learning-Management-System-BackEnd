@@ -3,11 +3,11 @@ import User from "../models/User.js";
 
 export const clerkWebhooks = async (req, res) => {
   try {
-    console.log("📢 Webhook received:", req.body);
+    console.log("📢 Webhook received from Clerk");
 
-    // Clerk Webhook Verification
+    // Webhook verification using raw body
     const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-    const payload = req.body; // DO NOT parse JSON again
+    const payload = req.body; // No need for JSON parsing
     const headers = {
       "svix-id": req.headers["svix-id"],
       "svix-timestamp": req.headers["svix-timestamp"],
@@ -15,13 +15,15 @@ export const clerkWebhooks = async (req, res) => {
     };
 
     try {
-      whook.verify(JSON.stringify(payload), headers);
+      whook.verify(payload, headers);
     } catch (err) {
       console.error("❌ Webhook Verification Failed:", err.message);
       return res.status(401).json({ success: false, message: "Unauthorized webhook" });
     }
 
-    const { data, type } = payload;
+    console.log("✅ Webhook Verified Successfully");
+
+    const { data, type } = JSON.parse(payload.toString());
 
     if (type === "user.created") {
       console.log("🔹 Processing user.created event:", data);
@@ -39,10 +41,14 @@ export const clerkWebhooks = async (req, res) => {
 
       console.log("📌 User Data to Save:", userData);
 
-      const newUser = await User.create(userData);
-      console.log("✅ User saved successfully:", newUser);
-
-      return res.status(200).json({ success: true });
+      try {
+        const newUser = await User.create(userData);
+        console.log("✅ User saved successfully:", newUser);
+        return res.status(200).json({ success: true });
+      } catch (dbError) {
+        console.error("❌ MongoDB Error:", dbError);
+        return res.status(500).json({ success: false, message: dbError.message });
+      }
     }
 
     console.warn("⚠️ Unhandled webhook event:", type);
