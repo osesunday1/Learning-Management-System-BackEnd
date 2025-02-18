@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 
 // Apply `express.raw()` only for Clerk Webhook route
-app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
+app.use('/clerk', express.raw({ type: 'application/json' }));
 
 // Connect to MongoDB
 const connect = async () => {
@@ -36,6 +36,8 @@ mongoose.connection.on("connected", () => {
 app.get('/', (req, res) => {
   res.send('Welcome to the GHS Apartment API!');
 });
+app.post('/clerk', clerkWebhooks);
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
