@@ -1,34 +1,56 @@
+import { Webhook } from "svix";
 import User from "../models/User.js";
 
+// API Controller Function to Manage Clerk User with database
 export const clerkWebhooks = async (req, res) => {
   try {
-    const payload = JSON.parse(req.body); // Clerk sends raw JSON data
+    const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
 
-    if (payload.type === "user.created") {
-      const { id, first_name, last_name, email_addresses, image_url } = payload.data;
+    await whook.verify(JSON.stringify(req.body), {
+      "svix-id": req.headers["svix-id"],
+      "svix-timestamp": req.headers["svix-timestamp"],
+      "svix-signature": req.headers["svix-signature"],
+    });
 
-      // Check if user already exists
-      const existingUser = await User.findOne({ email: email_addresses[0].email_address });
-      if (existingUser) {
-        return res.status(200).json({ message: "User already exists in DB" });
+    const { data, type } = req.body;
+
+    switch (type) {
+        case 'user.created': {
+          const userData = {
+            _id: data.id,
+            email: data.email_addresses[0].email_address,
+            name: data.first_name + " " + data.last_name,
+            imageUrl: data.image_url,
+          };
+      
+          await User.create(userData);
+          res.json({});
+          break;
+        }
+        case 'user.updated': {
+            const userData = {
+              email: data.email_addresses[0].email_address,
+              name: data.first_name + " " + data.last_name,
+              imageUrl: data.image_url,
+            };
+          
+            await User.findByIdAndUpdate(data.id, userData);
+            res.json({});
+            break;
+        }
+
+        case 'user.deleted': {
+            await User.findByIdAndDelete(data.id);
+            res.json({});
+            break;
+        }
+    
+        default:
+          break;
       }
 
-      // Create new user
-      const newUser = new User({
-        _id: id, // Clerk ID as _id
-        name: `${first_name} ${last_name}`,
-        email: email_addresses[0].email_address,
-        imageUrl: image_url,
-        enrolledCourses: [],
-      });
-
-      await newUser.save();
-      console.log("User saved to MongoDB:", newUser);
-    }
-
-    res.status(200).send("Webhook received successfully");
   } catch (error) {
-    console.error("Error processing Clerk webhook:", error);
-    res.status(500).json({ message: "Webhook error", error: error.message });
+    // Error handling logic
+    res.json({ success: false, message: error.message });
   }
 };
