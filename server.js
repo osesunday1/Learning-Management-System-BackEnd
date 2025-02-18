@@ -11,12 +11,12 @@ app.use(express.json());
 app.use(cors());
 
 // Apply `express.raw()` only for Clerk Webhook route
-app.use('/clerk', express.raw({ type: 'application/json' }));
+app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
 
 // Connect to MongoDB
 const connect = async () => {
   try {
-      await mongoose.connect(process.env.MONGO);
+      await mongoose.connect(`${process.env.MONGO}/lms`);
       console.log('✅ Connected to MongoDB');
   } catch (error) {
       console.error('❌ MongoDB Connection Error:', error);
@@ -36,8 +36,6 @@ mongoose.connection.on("connected", () => {
 app.get('/', (req, res) => {
   res.send('Welcome to the GHS Apartment API!');
 });
-app.post('/clerk', clerkWebhooks);
-
 
 // Start the server
 const PORT = process.env.PORT || 5000;
