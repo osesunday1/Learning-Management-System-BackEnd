@@ -32,6 +32,11 @@ mongoose.connection.on("connected", () => {
   console.log("✅ MongoDB Connected");
 });
 
+// Root route
+app.get('/', (req, res) => {
+  res.send('Welcome to the GHS Apartment API!');
+});
+
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
