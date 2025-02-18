@@ -5,9 +5,13 @@ export const clerkWebhooks = async (req, res) => {
   try {
     console.log("Webhook received:", req.body);
 
-    const { data, type } = req.body;
+    // Parse raw body
+    const payload = JSON.parse(req.body);
 
-    if (type === 'user.created') {
+    // Extract necessary data
+    const { data, type } = payload;
+
+    if (type === "user.created") {
       console.log("Creating user in MongoDB:", data);
 
       const userData = {
