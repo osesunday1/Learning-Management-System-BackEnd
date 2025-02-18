@@ -10,7 +10,7 @@ const app = express()
 // Initialize database connection
 const connect = async () => {
   try {
-      await mongoose.connect(`${process.env.MONGO}/test`);
+      await mongoose.connect(`${process.env.MONGO}`);
       console.log('connected to MongoDB');
   } catch (error) {
       console.error('Error connecting to MongoDB:', error);
