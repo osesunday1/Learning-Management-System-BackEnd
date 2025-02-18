@@ -1,12 +1,9 @@
+import { Webhook } from "svix";
+import User from "../models/User.js";
+
 export const clerkWebhooks = async (req, res) => {
   try {
     console.log("Webhook received:", req.body);
-    
-    // Temporarily bypass verification for debugging
-    // const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-    // await whook.verify(JSON.stringify(req.body), {});
-
-    console.log("Webhook type:", req.body.type);
 
     const { data, type } = req.body;
 
