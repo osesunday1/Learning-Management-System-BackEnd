@@ -7,8 +7,26 @@ import { clerkWebhooks } from './controllers/webhooks'
 // Initialize Express
 const app = express()
 
-// connect to database
-await connectDB()
+// Initialize database connection
+const connect = async () => {
+  try {
+      await mongoose.connect(process.env.MONGO);
+      console.log('connected to MongoDB');
+  } catch (error) {
+      console.error('Error connecting to MongoDB:', error);
+      throw error;
+  }
+};
+
+mongoose.connection.on("disconnected", () => {
+  console.log("MongoDB Disconnected");
+});
+
+mongoose.connection.on("connected", () => {
+  console.log("MongoDB Connected");
+});
+
+
 
 // Middlewares
 app.use(cors())
