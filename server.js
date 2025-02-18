@@ -39,5 +39,6 @@ app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
 const PORT = process.env.PORT || 5000
 
 app.listen(PORT, () => {
+    connect();
     console.log(`Server is running on port ${PORT}`)
 })
