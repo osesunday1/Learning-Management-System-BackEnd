@@ -1,17 +1,21 @@
 import express from 'express';
 import cors from 'cors';
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import { clerkWebhooks } from './controllers/webhooks.js';
+import cookieParser from 'cookie-parser';
+import authRoutes from './routes/authRoutes.js'
+import educatorRoutes from './routes/educatorRoutes.js';
+import userRoutes from './routes/userRoutes.js'
+
 
 const app = express();
+dotenv.config();// Load environment variables
+
 
 // Apply `express.json()` for normal API requests
-app.use(express.json());
 app.use(cors());
-
-// Apply `express.raw()` only for Clerk Webhook route
-app.post('/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
+app.use(cookieParser());
+app.use(express.json());
 
 // Connect to MongoDB
 const connect = async () => {
@@ -36,6 +40,14 @@ mongoose.connection.on("connected", () => {
 app.get('/', (req, res) => {
   res.send('Welcome to the GHS Apartment API!');
 });
+
+
+//use route
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/educators', educatorRoutes);
+app.use('/api/v1/users', userRoutes);
+
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
