@@ -72,3 +72,27 @@ export const getAllUsers = async (req, res, next) => {
       return next(new HttpError(`Deleting User failed: ${err.message}`, 500));
     }
   }
+
+  //get particular user
+  export const getParticularUser = async (req, res, next) => {
+    try {
+  
+        // 🔹 Get user ID from request params
+        const { userId } = req.params;
+  
+        // 🔹 Find the user in the database
+        const user = await User.findById(userId).select('-password'); // Exclude password
+  
+        // 🔹 If user not found, return 404
+        if (!user) {
+            return next(new HttpError('User not found', 404));
+        }
+  
+        // 🔹 Send user data as response
+        res.status(200).json({ success: true, user });
+  
+    } catch (error) {
+        return next(new HttpError(`Could not retrieve user: ${error.message}`, 500));
+    }
+  };
+
