@@ -8,7 +8,7 @@ import educatorRoutes from './routes/educatorRoutes.js';
 import userRoutes from './routes/userRoutes.js'
 import connectCloudinary from './configs/cloudinary.js';
 import courseRoutes from './routes/courseRoutes.js'
-
+import studentRoutes from './routes/studentRoutes.js'
 
 const app = express();
 dotenv.config();// Load environment variables
@@ -50,6 +50,7 @@ app.get('/', (req, res) => {
 //use route
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/educators', educatorRoutes);
+app.use('/api/v1/students', educatorRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/courses', courseRoutes);
 
