@@ -47,7 +47,7 @@ await connectCloudinary()
 
 // Root route
 app.get('/', (req, res) => {
-  res.send('Welcome to the GHS Apartment API!');
+  res.send('Welcome to the LMS!');
 });
 
 
