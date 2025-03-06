@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const lectureSchema = new mongoose.Schema({
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
     lectureId: { type: String, required: true },
     lectureTitle: { type: String, required: true },
     lectureDuration: { type: Number, required: true },
@@ -11,6 +12,7 @@ const lectureSchema = new mongoose.Schema({
 
 
 const chapterSchema = new mongoose.Schema({
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true }, // Use ObjectId instead of chapterId
     chapterId: { type: String, required: true },
     chapterOrder: { type: Number, required: true },
     chapterTitle: { type: String, required: true },

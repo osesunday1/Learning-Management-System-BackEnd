@@ -34,7 +34,7 @@ export const signup = async (req, res, next) => {
         const newUser = await UserModel.create({
             name: req.body.name,
             email: req.body.email,
-            role: req.body.role || 'user', // Default role is 'user'
+            role: req.body.role || 'student', // Default role is 'student'
             password: req.body.password,
             passwordConfirm: req.body.passwordConfirm
         });

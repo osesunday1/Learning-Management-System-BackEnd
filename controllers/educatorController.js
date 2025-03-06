@@ -38,47 +38,47 @@ export const updateEducator = async(req, res, next)=>{
 
 
   // Add New Course
-export const addCourse = async(req, res, next) => {
-  try{
-    console.log("REQ FILE: ", req.file); // ✅ Debugging: Check if file exists
-    console.log("REQ BODY: ", req.body); // ✅ Debugging: Check if form data exists
-
-
-    const { courseData } = req.body
-    const imageFile = req.file
-    const educatorId = req.user.id
+// ✅ Upload Image to Cloudinary inside "courses" folder
+export const addCourse = async (req, res, next) => {
+  try {
+    const { courseData } = req.body;
+    const imageFile = req.file; // ✅ Retrieve file from Multer
+    const educatorId = req.user.id;
 
     if (!imageFile) {
-        return res.json({ success: false, message: 'Image Not Attached' });
+      return res.status(400).json({ success: false, message: "Image Not Attached" });
     }
-    
-    const parsedCourseData = await JSON.parse(courseData);
-    parsedCourseData.educator = educatorId;
-  
-    const newCourse=await Course.create(parsedCourseData);
-    const imageUpload= await cloudinary.uploader.upload(imageFile.path)
-    newCourse.courseThumbnail = imageUpload.secure_url
-    await newCourse.save()
 
-    res.status(200).json({
-      status: 'success',
-      message:{
-        Course: newCourse
-      }
+    // ✅ Convert Buffer to Base64 (for Memory Storage)
+    const base64Image = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString("base64")}`;
+
+    // ✅ Upload Image to Cloudinary inside "courses" folder
+    const imageUpload = await cloudinary.uploader.upload(base64Image, {
+      folder: "courses", // ✅ Store images inside the "courses" folder
+      resource_type: "image",
     });
 
-  }catch(err){
+    // ✅ Parse Course Data
+    const parsedCourseData = JSON.parse(courseData);
+    parsedCourseData.educator = educatorId;
+    parsedCourseData.courseThumbnail = imageUpload.secure_url; // ✅ Store Cloudinary URL
+
+    // ✅ Create Course in Database
+    const newCourse = await Course.create(parsedCourseData);
+
+    res.status(201).json({ success: true, message: "Course added successfully!", course: newCourse });
+
+  } catch (err) {
     return next(new HttpError(`Creating Course failed: ${err.message}`, 500));
   }
-}
-
+};
 
 // Get Educator Courses
 export const getEducatorCourses = async (req, res, next) => {
   try {
       const educator = req.user.id
-      const courses = await Course.find({ educator });
-      res.json({ success: true, courses });
+      const data = await Course.find({ educator });
+      res.json({ success: true, data });
   } catch (err) {
     return next(new HttpError(`Could not get Educator Courses courses: ${err.message}`, 500));
   }
@@ -165,5 +165,87 @@ export const getCourseStudents = async (req, res, next) => {
 
   } catch (err) {
       return next(new HttpError(`Could not retrieve students: ${err.message}`, 500));
+  }
+};
+
+
+
+// ✅ Update Course Controller
+export const updateCourse = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const educatorId = req.user.id; // ✅ Ensure only course creator can update it
+    const { courseData } = req.body;
+    const imageFile = req.file; // ✅ Optional: New image uploaded
+
+    // ✅ Find course
+    const course = await Course.findOne({ _id: courseId, educator: educatorId });
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found or unauthorized" });
+    }
+
+    // ✅ If new image is uploaded, replace the old one
+    if (imageFile) {
+      // 🔹 Delete old image from Cloudinary
+      if (course.courseThumbnail) {
+        const publicId = course.courseThumbnail.split('/').pop().split('.')[0]; // Extract public_id
+        await cloudinary.uploader.destroy(`courses/${publicId}`);
+      }
+
+      // 🔹 Upload new image
+      const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
+        folder: "courses",
+        resource_type: "image",
+      });
+
+      course.courseThumbnail = imageUpload.secure_url; // ✅ Save new image URL
+    }
+
+    // ✅ Ensure `courseData` exists before parsing
+    if (!courseData) {
+      return res.status(400).json({ success: false, message: "Course data is missing" });
+    }
+
+    // ✅ Update course fields
+    const parsedCourseData = JSON.parse(courseData);
+    Object.assign(course, parsedCourseData); // ✅ Merge new data
+
+    await course.save();
+
+    res.status(200).json({ success: true, message: "Course updated successfully!", course });
+
+  } catch (err) {
+    return next(new HttpError(`Updating Course failed: ${err.message}`, 500));
+  }
+};
+
+
+// ✅ Delete Course Controller
+export const deleteCourse = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const educatorId = req.user.id; // ✅ Ensure only course creator can delete it
+
+    // ✅ Find course
+    const course = await Course.findOne({ _id: courseId, educator: educatorId });
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found or unauthorized" });
+    }
+
+    // ✅ If course has a thumbnail, delete it from Cloudinary
+    if (course.courseThumbnail) {
+      const publicId = course.courseThumbnail.split('/').pop().split('.')[0]; // Extract Cloudinary public ID
+      await cloudinary.uploader.destroy(`courses/${publicId}`);
+    }
+
+    // ✅ Delete the course from MongoDB
+    await Course.findByIdAndDelete(courseId);
+
+    res.status(200).json({ success: true, message: "Course deleted successfully!" });
+
+  } catch (err) {
+    return next(new HttpError(`Deleting Course failed: ${err.message}`, 500));
   }
 };

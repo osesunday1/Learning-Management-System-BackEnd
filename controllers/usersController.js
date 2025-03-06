@@ -58,7 +58,7 @@ export const getAllUsers = async (req, res, next) => {
 
 
 
-  export const deleteUser = async(req, res, next)=>{
+export const deleteUser = async(req, res, next)=>{
     try{
       const { id } = req.params; // Get user ID from route params
 
@@ -96,3 +96,18 @@ export const getAllUsers = async (req, res, next) => {
     }
   };
 
+  export const getLoginUser = async (req, res, next) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Not authorized, no user found" });
+      }
+  
+      const data = await UserModel.findById(req.user.id).select("-password"); // ✅ Now `req.user.id` will be available
+  
+      if (!data) return res.status(404).json({ message: "User not found" });
+  
+      res.status(200).json({ data }); // ✅ Fixed `data` to `user`
+    } catch (error) {
+      return next(new HttpError(`Could not retrieve logged-in user: ${error.message}`, 500));
+    }
+  };

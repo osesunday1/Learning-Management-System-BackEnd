@@ -1,9 +1,10 @@
+import { CourseProgress }  from '../models/CourseProgress.js';
 import Course from '../models/Courses.js';
 import User from '../models/UserModel.js';
 import HttpError from '../utils/httpError.js';
 
   
-  // Get All Courses a User is Enrolled In
+  // Get All Courses a student is Enrolled In
   export const studentEnrolledCourses = async (req, res, next) => {
     try {
         const userId = req.user.id; // Get the authenticated user ID
@@ -22,68 +23,103 @@ import HttpError from '../utils/httpError.js';
 // Update student Course Progress
 export const updateStudentCourseProgress = async (req, res, next) => {
   try {
-    const userId = req.user.id; // Corrected authentication reference
-    const { courseId, lectureId } = req.body;
+    const { userId, courseId, lectureId } = req.body;
 
-    // 🔹 Find existing progress for the user and course
-    let progressData = await CourseProgress.findOne({ userId, courseId });
-
-    if (progressData) {
-      // 🔹 Check if lecture is already completed
-      if (progressData.lectureCompleted.includes(lectureId)) {
-        return res.status(200).json({ success: false, message: 'Lecture already completed' });
-      }
-
-      // 🔹 Add new lecture to completed list
-      progressData.lectureCompleted.push(lectureId);
-      await progressData.save();
-    } else {
-      // 🔹 Create new progress entry if it doesn't exist
-      progressData = await CourseProgress.create({
-        userId,
-        courseId,
-        lectureCompleted: [lectureId]
-      });
-    }
-
-    // 🔹 Check if all lectures are completed & mark course as completed
+    // 🔹 Step 1: Validate Course & Lecture
     const course = await Course.findById(courseId);
-    if (course) {
-      const totalLectures = course.courseContent.reduce((sum, chapter) => sum + chapter.chapterContent.length, 0);
-      if (progressData.lectureCompleted.length === totalLectures) {
-        progressData.completed = true;
-        await progressData.save();
-      }
+    if (!course) return res.status(404).json({ success: false, message: "Course not found" });
+
+    const totalLectures = course.courseContent.reduce(
+        (sum, chapter) => sum + chapter.chapterContent.length, 0
+    );
+
+    const lectureExists = course.courseContent.some(chapter =>
+        chapter.chapterContent.some(lecture => lecture._id.equals(lectureId))
+    );
+
+    if (!lectureExists) return res.status(400).json({ success: false, message: "Lecture not found in this course" });
+
+    // 🔹 Step 2: Update Progress
+    let progress = await CourseProgress.findOne({ userId, courseId });
+
+    if (!progress) {
+        progress = new CourseProgress({ userId, courseId, lectureCompleted: [lectureId] });
+    } else if (!progress.lectureCompleted.includes(lectureId)) {
+        progress.lectureCompleted.push(lectureId);
     }
 
-    res.status(200).json({ success: true, message: 'Progress Updated' });
+    // 🔹 Step 3: Calculate Progress Percentage
+    progress.progressPercentage = (progress.lectureCompleted.length / totalLectures) * 100;
+    await progress.save();
 
-  } catch (error) {
-    return next(new HttpError(`Could not update progress: ${error.message}`, 500));
-  }
+    res.status(200).json({
+        success: true,
+        message: "Progress updated",
+        progress: {
+            completedLectures: progress.lectureCompleted.length,
+            totalLectures,
+            progressPercentage: progress.progressPercentage.toFixed(2),
+        }
+    });
+
+} catch (error) {
+    res.status(500).json({ success: false, message: `Error updating progress: ${error.message}` });
+}
 };
 
 
 // Get student Course Progress
+
 export const getStudentCourseProgress = async (req, res, next) => {
   try {
-      const userId = req.user.id; // ✅ Corrected authentication reference
-      const { courseId } = req.params; // ✅ Get courseId from URL parameters
+    const { userId, courseId } = req.params;
+    const progressData = await CourseProgress.findOne({ userId, courseId });
 
-      // 🔹 Find progress for this user and course
-      const progressData = await CourseProgress.findOne({ userId, courseId });
+    if (!progressData) {
+      return res.status(404).json({ success: false, message: "No progress found for this course" });
+    }
 
-      // 🔹 If no progress exists, return 404
-      if (!progressData) {
-          return res.status(404).json({ success: false, message: 'No progress found for this course' });
-      }
-
-      res.status(200).json({ success: true, progressData });
+    res.status(200).json({
+      success: true,
+      progress: {
+        courseId,
+        completedLectures: progressData.lectureCompleted.length,
+        totalLectures: progressData.progressPercentage > 0 ? Math.round((progressData.progressPercentage / 100) * progressData.lectureCompleted.length) : 0,
+        progressPercentage: progressData.progressPercentage.toFixed(2),
+      },
+    });
 
   } catch (error) {
-      return next(new HttpError(`Could not retrieve progress: ${error.message}`, 500));
+    return next(new HttpError(`Could not fetch progress: ${error.message}`, 500));
   }
 };
+
+/// get progress for all enrolled courses
+export const getAllStudentProgress = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+
+    // Find all progress records for this user
+    const progressData = await CourseProgress.find({ userId });
+
+    if (!progressData || progressData.length === 0) {
+      return res.status(404).json({ success: false, message: "No progress found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: progressData.map((progress) => ({
+        courseId: progress.courseId,
+        completedLectures: progress.lectureCompleted.length,
+        progressPercentage: progress.progressPercentage || 0, // Ensure progressPercentage is always included
+      })),
+    });
+
+  } catch (error) {
+    return next(new HttpError(`Could not fetch progress: ${error.message}`, 500));
+  }
+};
+
 
 
 // Add Student Ratings to Course

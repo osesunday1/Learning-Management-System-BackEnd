@@ -1,24 +1,26 @@
 import Course from "../models/Courses.js";
-
+import HttpError from '../utils/httpError.js';
 
 // Get All Published Courses
 export const getAllCourse = async (req, res, next) => {
     try {
         // 🔹 Find all courses that are published (`isPublished: true`)
-        const courses = await Course.find({ isPublished: true })
+        const data = await Course.find({ isPublished: true })
             // 🔹 Exclude `courseContent` and `enrolledStudents` fields from the result
-            .select(['-courseContent', '-enrolledStudents']) 
+            .select(['-courseContent',]) 
             // 🔹 Populate `educator` field with full user details instead of just id
             .populate({ path: 'educator' });
   
         // 🔹 Send the retrieved courses as a JSON response
-        res.status(200).json({ success: true, courses });
+        res.status(200).json({ success: true, data });
   
     } catch (error) {
         // 🔹 Handle any server error and pass it to the next middleware
         return next(new HttpError(`Could not fetch courses: ${error.message}`, 500));
     }
   };
+
+
 
   // Get Course by ID
 export const getCourseId = async (req, res, next) => {
@@ -47,7 +49,7 @@ export const getCourseId = async (req, res, next) => {
         // 🔹 Send course data as response
         res.status(200).json({
             success: true,
-            course: courseData
+            data: courseData
         });
   
     } catch (error) {

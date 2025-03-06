@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: [true, 'Please provide password'], // Password is required
-        minlength: 4, // Password must have at least 4 characters
+        minlength: 3, // Password must have at least 4 characters
         select: false // Ensures password is not returned in queries by default
     },
     
