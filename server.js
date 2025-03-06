@@ -15,7 +15,11 @@ dotenv.config();// Load environment variables
 
 
 // Apply `express.json()` for normal API requests
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://learning-management-system-six-livid.vercel.app/auth'], // Allow frontend
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true // Allow cookies if needed
+}));
 app.use(cookieParser());
 app.use(express.json());
 
