@@ -163,3 +163,74 @@ export const addStudentRating = async (req, res) => {
       res.status(500).json({ success: false, message: `Could not add rating: ${error.message}` });
   }
 };
+
+
+// Enroll a student in a course
+export const enrollStudentToCourse = async (req, res, next) => {
+  try {
+      const userId = req.user.id; // Get logged-in student ID
+      const { courseId } = req.body;
+
+      // Validate Course ID
+      if (!courseId) return next(new HttpError("Course ID is required", 400));
+
+      const course = await Course.findById(courseId);
+      if (!course) return next(new HttpError("Course not found", 404));
+
+      // Check if the student is already enrolled
+      if (course.enrolledStudents.includes(userId)) {
+          return res.status(400).json({ success: false, message: "Student already enrolled in this course" });
+      }
+
+      // Enroll student
+      course.enrolledStudents.push(userId);
+      await course.save();
+
+      // Initialize course progress
+      await CourseProgress.create({ userId, courseId, lectureCompleted: [] });
+
+      res.status(200).json({
+          success: true,
+          message: "Student successfully enrolled",
+          courseId,
+          studentId: userId,
+      });
+
+  } catch (error) {
+      return next(new HttpError(`Enrollment failed: ${error.message}`, 500));
+  }
+};
+
+//  Unregister a student from a course
+export const unregisterStudentFromCourse = async (req, res, next) => {
+  try {
+      const userId = req.user.id; // Get logged-in student ID
+      const { courseId } = req.body;
+
+      //  Validate Course ID
+      if (!courseId) return next(new HttpError("Course ID is required", 400));
+
+      const course = await Course.findById(courseId);
+      if (!course) return next(new HttpError("Course not found", 404));
+
+      //  Check if student is enrolled
+      if (!course.enrolledStudents.includes(userId)) {
+          return res.status(400).json({ success: false, message: "You are not enrolled in this course" });
+      }
+
+      //  Remove student from enrolled list
+      course.enrolledStudents = course.enrolledStudents.filter(id => id.toString() !== userId);
+      await course.save();
+
+      //  Delete student's progress record for this course
+      await CourseProgress.findOneAndDelete({ userId, courseId });
+
+      res.status(200).json({
+          success: true,
+          message: "You have successfully unregistered from the course",
+      });
+
+  } catch (error) {
+      return next(new HttpError(`Unregistration failed: ${error.message}`, 500));
+  }
+};

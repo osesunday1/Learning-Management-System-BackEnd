@@ -38,32 +38,32 @@ export const updateEducator = async(req, res, next)=>{
 
 
   // Add New Course
-// ✅ Upload Image to Cloudinary inside "courses" folder
+//  Upload Image to Cloudinary inside "courses" folder
 export const addCourse = async (req, res, next) => {
   try {
     const { courseData } = req.body;
-    const imageFile = req.file; // ✅ Retrieve file from Multer
+    const imageFile = req.file; //  Retrieve file from Multer
     const educatorId = req.user.id;
 
     if (!imageFile) {
       return res.status(400).json({ success: false, message: "Image Not Attached" });
     }
 
-    // ✅ Convert Buffer to Base64 (for Memory Storage)
+    //  Convert Buffer to Base64 (for Memory Storage)
     const base64Image = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString("base64")}`;
 
-    // ✅ Upload Image to Cloudinary inside "courses" folder
+    //  Upload Image to Cloudinary inside "courses" folder
     const imageUpload = await cloudinary.uploader.upload(base64Image, {
-      folder: "courses", // ✅ Store images inside the "courses" folder
+      folder: "courses", // Store images inside the "courses" folder
       resource_type: "image",
     });
 
-    // ✅ Parse Course Data
+    //  Parse Course Data
     const parsedCourseData = JSON.parse(courseData);
     parsedCourseData.educator = educatorId;
     parsedCourseData.courseThumbnail = imageUpload.secure_url; // ✅ Store Cloudinary URL
 
-    // ✅ Create Course in Database
+    //  Create Course in Database
     const newCourse = await Course.create(parsedCourseData);
 
     res.status(201).json({ success: true, message: "Course added successfully!", course: newCourse });

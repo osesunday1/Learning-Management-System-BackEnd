@@ -4,7 +4,9 @@ import {
     updateStudentCourseProgress, 
     getStudentCourseProgress, 
     addStudentRating,
-    getAllStudentProgress 
+    getAllStudentProgress,
+    enrollStudentToCourse,
+    unregisterStudentFromCourse  
 } from '../controllers/studentController.js'; 
 import { protect } from '../controllers/authController.js';
 
@@ -24,5 +26,11 @@ router.get('/course-progress/:userId', protect, getAllStudentProgress);
 
 // 🔹 Allow students to rate a course
 router.post('/rate', protect, addStudentRating);
+
+// 🔹 Enroll student in a course (Protected Route)
+router.post('/enroll', protect, enrollStudentToCourse);
+
+// 🔹 Unregister student from a course
+router.post('/unregister', protect, unregisterStudentFromCourse);
 
 export default router;
