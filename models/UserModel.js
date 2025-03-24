@@ -7,9 +7,14 @@ import bcrypt from 'bcrypt'; // Used for hashing passwords
 
 // Define the User schema with Mongoose
 const userSchema = new mongoose.Schema({
-    name: {
+    firstName: {
         type: String,
-        required: [true, 'please insert your name'] // Name is required
+        required: [true, 'Please provide your first name'] // Name is required
+    },
+
+    lastName: {
+        type: String,
+        required: [true, 'Please provide your last name'] // Name is required
     },
 
     email: {

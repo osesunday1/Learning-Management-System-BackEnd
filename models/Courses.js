@@ -4,8 +4,12 @@ const lectureSchema = new mongoose.Schema({
     _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
     lectureId: { type: String, required: true },
     lectureTitle: { type: String, required: true },
-    lectureDuration: { type: Number, required: true },
-    lectureUrl: { type: String, required: true },
+    lectureDuration: { type: Number, required: false }, // Not required for documents
+    lectureUrl: { type: String, required: false }, // ✅ Video URL (optional)
+    lectureFile: { 
+        url: { type: String, required: false }, // ✅ Document URL (optional)
+        filename: { type: String, required: false } // ✅ Document name
+    },
     isPreviewFree: { type: Boolean, required: true },
     lectureOrder: { type: Number, required: true }
 }, { _id: false });
@@ -28,6 +32,12 @@ const courseSchema = new mongoose.Schema({
     isPublished: { type: Boolean, default: true },
     discount: { type: Number, min: 0 },
     courseContent: [chapterSchema],
+    courseMaterials: [ // ✅ General course documents (e.g., syllabus, PDFs)
+        {
+            url: { type: String, required: false }, // Cloudinary URL
+            filename: { type: String, required: false } // Original file name
+        }
+    ],
     courseRatings: [
         { 
             userId: { type: String }, 

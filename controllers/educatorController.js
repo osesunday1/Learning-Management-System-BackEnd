@@ -3,7 +3,7 @@ import { Purchase } from '../models/Purchase.js';
 import UserModel from '../models/UserModel.js';
 import HttpError from '../utils/httpError.js';
 import {v2 as cloudinary} from 'cloudinary'
-
+import { bucket } from "../configs/firebaseConfig.js"; // ✅ Import Firebase Admin Config
 
 
 export const updateEducator = async(req, res, next)=>{
@@ -37,43 +37,89 @@ export const updateEducator = async(req, res, next)=>{
   };
 
 
-  // Add New Course
-//  Upload Image to Cloudinary inside "courses" folder
-export const addCourse = async (req, res, next) => {
-  try {
-    const { courseData } = req.body;
-    const imageFile = req.file; //  Retrieve file from Multer
-    const educatorId = req.user.id;
+  //============== Add New Course
 
-    if (!imageFile) {
-      return res.status(400).json({ success: false, message: "Image Not Attached" });
+  export const addCourse = async (req, res, next) => {
+    try {
+        const { courseData } = req.body;
+        const educatorId = req.user.id;
+        const files = req.files; // 🔹 Multer stores uploaded files here
+
+        if (!files || !files.image) {
+            return res.status(400).json({ success: false, message: "Image Not Attached" });
+        }
+
+        // 🔹 Upload Course Thumbnail to Cloudinary
+        const base64Image = `data:${files.image[0].mimetype};base64,${files.image[0].buffer.toString("base64")}`;
+        const imageUpload = await cloudinary.uploader.upload(base64Image, {
+            folder: "courses",
+            resource_type: "image",
+        });
+
+        // 🔹 Upload Course Materials (Syllabus, Notes) to Firebase Storage
+        let uploadedDocuments = [];
+        if (files.documents) {
+            uploadedDocuments = await Promise.all(
+                files.documents.map(async (doc) => {
+                    const fileName = `course-materials/${Date.now()}_${doc.originalname}`;
+                    const fileUpload = bucket.file(fileName);
+
+                    await fileUpload.save(doc.buffer, {
+                        metadata: { contentType: doc.mimetype },
+                        public: true,
+                    });
+
+                    const fileUrl = `https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/${fileName}`;
+                    return { url: fileUrl, filename: doc.originalname };
+                })
+            );
+        }
+
+        // 🔹 Parse Course Data
+        const parsedCourseData = JSON.parse(courseData);
+        parsedCourseData.educator = educatorId;
+        parsedCourseData.courseThumbnail = imageUpload.secure_url; // ✅ Store Cloudinary image URL
+        parsedCourseData.courseMaterials = uploadedDocuments; // ✅ Store Firebase document URLs
+
+        // 🔹 Process Lecture Documents (Upload to Firebase)
+        if (parsedCourseData.courseContent) {
+            for (let chapter of parsedCourseData.courseContent) {
+                for (let lecture of chapter.chapterContent) {
+                    if (files.lectureFiles && files.lectureFiles.length > 0) {
+                        const lectureDoc = files.lectureFiles.shift(); // Get first file
+
+                        // ✅ Upload to Firebase Storage
+                        const fileName = `lecture-documents/${Date.now()}_${lectureDoc.originalname}`;
+                        const fileUpload = bucket.file(fileName);
+
+                        await fileUpload.save(lectureDoc.buffer, {
+                            metadata: { contentType: lectureDoc.mimetype },
+                            public: true,
+                        });
+
+                        // ✅ Store Firebase URL in Lecture Object
+                        lecture.lectureFile = {
+                            url: `https://storage.googleapis.com/${process.env.FIREBASE_STORAGE_BUCKET}/${fileName}`,
+                            filename: lectureDoc.originalname,
+                        };
+                    }
+                }
+            }
+        }
+
+        // 🔹 Create Course in Database
+        const newCourse = await Course.create(parsedCourseData);
+
+        res.status(201).json({ success: true, message: "Course added successfully!", course: newCourse });
+
+    } catch (err) {
+        return next(new HttpError(`Creating Course failed: ${err.message}`, 500));
     }
-
-    //  Convert Buffer to Base64 (for Memory Storage)
-    const base64Image = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString("base64")}`;
-
-    //  Upload Image to Cloudinary inside "courses" folder
-    const imageUpload = await cloudinary.uploader.upload(base64Image, {
-      folder: "courses", // Store images inside the "courses" folder
-      resource_type: "image",
-    });
-
-    //  Parse Course Data
-    const parsedCourseData = JSON.parse(courseData);
-    parsedCourseData.educator = educatorId;
-    parsedCourseData.courseThumbnail = imageUpload.secure_url; // ✅ Store Cloudinary URL
-
-    //  Create Course in Database
-    const newCourse = await Course.create(parsedCourseData);
-
-    res.status(201).json({ success: true, message: "Course added successfully!", course: newCourse });
-
-  } catch (err) {
-    return next(new HttpError(`Creating Course failed: ${err.message}`, 500));
-  }
 };
 
-// Get Educator Courses
+
+
+/////// Get Educator Courses
 export const getEducatorCourses = async (req, res, next) => {
   try {
       const educator = req.user.id

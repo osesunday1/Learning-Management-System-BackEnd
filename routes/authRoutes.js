@@ -1,13 +1,14 @@
 import express from 'express';
 import { signup, login, forgotPassword, resetPassword, updatePassword, protect } from '../controllers/authController.js'; // Ensure named exports are used
-
+import upload from '../configs/multer.js';
 
 const router = express.Router();
 
 
 
 
-router.post('/signup', signup)
+// Signup with file upload
+router.post('/signup', upload.single("photo"), signup);
 router.post('/login', login)
 
 router.post('/forgotPassword', forgotPassword)

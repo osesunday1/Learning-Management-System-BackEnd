@@ -62,7 +62,7 @@ app.use('/api/v1/courses', courseRoutes);
 
 
 // Start the server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5006;
 app.listen(PORT, () => {
     connect();
     console.log(`🚀 Server running on port ${PORT}`);

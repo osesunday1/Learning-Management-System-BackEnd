@@ -3,6 +3,11 @@ import { promisify } from 'util'; // Converts callback-based functions to Promis
 import crypto from 'crypto'; // Used for generating secure random tokens
 import UserModel from '../models/UserModel.js'; // Import User model
 import HttpError from '../utils/httpError.js'; // Custom error handling class
+import {v2 as cloudinary} from 'cloudinary'
+import bcrypt from 'bcrypt';
+
+
+
 // ============================
 // 🔹 Generate JWT Token
 // ============================
@@ -30,17 +35,69 @@ const createSendToken = (user, statusCode, res) => {
 // ============================
 export const signup = async (req, res, next) => {
     try {
-        // 1) Create a new user in the database
+
+        const { firstName, lastName, email, password, passwordConfirm, role } = req.body;
+
+        
+        // Ensure all required fields are provided
+        if (!firstName || !lastName || !email || !password || !passwordConfirm) {
+            return next(new HttpError("All fields are required.", 400));
+        }
+
+        // Check if passwords match
+        if (password !== passwordConfirm) {
+            return next(new HttpError("Passwords do not match.", 400));
+        }
+
+        // Check if email already exists
+        const existingUser = await UserModel.findOne({ email });
+        if (existingUser) {
+            return next(new HttpError("Email is already in use.", 400));
+        }
+
+        let photoUrl = ""; // Default empty
+    
+    //////////////////  Retrieve file from Multer
+        const imageFile = req.file; //  Retrieve file from Multer
+        if (!imageFile) {
+              return res.status(400).json({ success: false, message: "Image Not Attached" });
+            }
+        
+            //  Convert Buffer to Base64 (for Memory Storage)
+            const base64Image = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString("base64")}`;
+        
+            //  Upload Image to Cloudinary inside "courses" folder
+            const imageUpload = await cloudinary.uploader.upload(base64Image, {
+              folder: "users", // Store images inside the "courses" folder
+              resource_type: "image",
+            });
+
+             //  Parse Course Data
+            photoUrl = imageUpload.secure_url;
+
+        
+
+        // ✅ Create new user
         const newUser = await UserModel.create({
-            name: req.body.name,
-            email: req.body.email,
-            role: req.body.role || 'student', // Default role is 'student'
-            password: req.body.password,
-            passwordConfirm: req.body.passwordConfirm
+            firstName,
+            lastName,
+            email,
+            role: role || "student", // Default role is 'student'
+            password: password, // Store hashed password
+            passwordConfirm:passwordConfirm,
+            photo: photoUrl // Save Cloudinary URL
         });
 
-        // 2) Send JWT token in response
-        createSendToken(newUser, 201, res);
+        // ✅ Remove password from response for security
+        newUser.password = undefined;
+
+        // ✅ Send success response
+        res.status(201).json({
+            success: true,
+            message: "User registered successfully!",
+            user: newUser
+        });
+
     } catch (err) {
         return next(new HttpError(`Signup failed: ${err.message}`, 500));
     }

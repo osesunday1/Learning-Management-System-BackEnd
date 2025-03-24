@@ -6,7 +6,8 @@ import {
     addStudentRating,
     getAllStudentProgress,
     enrollStudentToCourse,
-    unregisterStudentFromCourse  
+    unregisterStudentFromCourse,
+    verifyPaystackPayment  
 } from '../controllers/studentController.js'; 
 import { protect } from '../controllers/authController.js';
 
@@ -32,5 +33,8 @@ router.post('/enroll', protect, enrollStudentToCourse);
 
 // 🔹 Unregister student from a course
 router.post('/unregister', protect, unregisterStudentFromCourse);
+
+//paystack route
+router.post('/verify', protect, verifyPaystackPayment);
 
 export default router;
